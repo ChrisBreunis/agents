@@ -41,6 +41,22 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 (of zet hem in `.env` — kopieer eerst `.env.example` naar `.env`).
 
+## Stap 3b — Onderzoeksvraag scherpstellen (aanbevolen)
+
+Bewerk `onderzoeksvraag.md`. Daarin staat de situatieschets en stuur je de
+inhoudelijke analyse:
+
+- Vul bij `TERUGMELDING_BESTAND:` de exacte bestandsnaam van de terugmelding in
+  (zoals die in `input_documenten/` staat). Dan toetst de analyse de beweringen
+  daarin **woord voor woord** tegen de overige stukken.
+- Plak desgewenst de letterlijke **JBT-vragen** (of laat leeg — dan zoekt de
+  analyse ze op in de documenten).
+
+`analyze.py` levert dan in `duiding.md`: **(A)** antwoorden op de JBT-vragen met
+bronnen, en **(B)** een toetsingstabel van de terugmelding — per bewering wat de
+stukken tonen, met letterlijk citaat, bron `[nr]` en classificatie
+(ondersteund / weersproken / niet verifieerbaar, enz.).
+
 ## Stap 4 — Alles in één keer draaien
 
 ```bash
