@@ -1,111 +1,104 @@
-# SharePoint-bibliotheek uitlezen voor raadsonderzoek
+# Documenten uitlezen en duiden voor een raadsonderzoek (lokaal)
 
-Koppelt met een SharePoint-documentbibliotheek, leest **alle** bestanden uit en
-maakt een **rapportage met tijdlijn en bronvermelding**. Je logt in met je eigen
-account (device-code), dus je leest precies de bestanden waar jij toegang toe hebt.
+Leest **alle** documenten uit een lokale map, maakt een **feitelijke tijdlijn met
+bronvermelding**, en laat **Claude een inhoudelijke duiding** schrijven waarin elke
+bewering met `[nr]` naar het bronregister verwijst. Geen SharePoint, geen Microsoft
+Graph, geen login — jij zet de map met bestanden klaar en draait één commando.
 
 ```
-┌──────────┐   device-code login   ┌──────────────┐   download + extract   ┌─────────────┐
-│ jij/PC   │ ────────────────────▶ │ Microsoft     │ ─────────────────────▶ │ output/     │
-│          │                       │ Graph (SharePt)│                        │ manifest +  │
-│          │ ◀──────────────────── │               │                        │ tekst + md  │
-└──────────┘     code in browser    └──────────────┘                        └─────────────┘
+input_documenten/  ──►  local_ingest.py  ──►  report.py   ──►  rapportage.md   (feiten + tijdlijn)
+   (jouw ±50 docs)        (tekst + bronregister)   analyze.py  ──►  duiding.md      (inhoudelijke analyse)
 ```
-
-## Wat je krijgt
-
-- `output/documenten/`  – de gedownloade originelen
-- `output/tekst/`       – per document de geëxtraheerde platte tekst
-- `output/manifest.json`– **bronregister**: per bestand naam, pad, SharePoint-URL, datums, auteur, hash
-- `output/rapportage.md`– rapportage met **chronologische tijdlijn** en bronverwijzingen
 
 ---
 
-## Stap 1 — Azure AD app-registratie (eenmalig, ±5 min)
+## Stap 1 — Documenten klaarzetten
 
-Device-code login heeft een *public client* app-registratie nodig (geen secret).
+Zet je bestanden hier neer (submappen mogen — alles wordt recursief doorzocht):
 
-1. Ga naar [entra.microsoft.com](https://entra.microsoft.com) → **Identity** →
-   **Applications** → **App registrations** → **New registration**.
-2. Naam: bv. `Raadsonderzoek-uitlezer`. Supported account types: *Single tenant*.
-   Redirect URI: leeg laten. → **Register**.
-3. Noteer op de overzichtspagina de **Application (client) ID** en de
-   **Directory (tenant) ID**.
-4. Ga naar **Authentication** → onder *Advanced settings* zet
-   **Allow public client flows** op **Yes** → **Save**.
-5. Ga naar **API permissions** → **Add a permission** → **Microsoft Graph** →
-   **Delegated permissions** → voeg toe: `Sites.Read.All` en `Files.Read.All`.
-   Klik daarna op **Grant admin consent** (of laat een beheerder dit doen).
+```
+sharepoint_research/input_documenten/
+```
 
-> Geen rechten om dit te doen? Vraag een beheerder de app te registreren en
-> jou de **client-id** en **tenant-id** te geven.
+Ondersteund: `.docx`, `.pdf`, `.xlsx`, `.pptx`, `.rtf`, `.txt`, `.csv`, `.md`, `.log`.
 
 ## Stap 2 — Installeren
 
 ```bash
 cd sharepoint_research
-python -m venv .venv && source .venv/bin/activate   # of: uv venv
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Stap 3 — Configureren
+## Stap 3 — API-sleutel voor de duiding
+
+De feitelijke tijdlijn werkt zonder sleutel. Voor de **inhoudelijke duiding** door
+Claude heb je je eigen Anthropic-sleutel nodig:
 
 ```bash
-cp .env.example .env
+export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Vul in `.env` in:
+(of zet hem in `.env` — kopieer eerst `.env.example` naar `.env`).
 
-| Variabele        | Voorbeeld                                              |
-|------------------|--------------------------------------------------------|
-| `SP_TENANT_ID`   | `contoso.onmicrosoft.com` of de GUID                   |
-| `SP_CLIENT_ID`   | de Application (client) ID uit stap 1                  |
-| `SP_SITE_URL`    | `https://contoso.sharepoint.com/sites/Raadsonderzoek`  |
-| `SP_LIBRARY_NAME`| `Documenten` (leeg = standaardbibliotheek van de site) |
-
-> De site-URL vind je door in de browser naar de SharePoint-site te gaan; alles
-> t/m `/sites/<naam>` is de site-URL. De bibliotheeknaam staat links in het menu.
-
-## Stap 4 — Uitlezen
+## Stap 4 — Alles in één keer draaien
 
 ```bash
-python fetch.py
+python run.py
 ```
 
-Er verschijnt een melding als:
+Dit doet achter elkaar:
 
-```
-To sign in, use a web browser to open https://microsoft.com/devicelogin
-and enter the code ABCD-EFGH to authenticate.
-```
+1. **`local_ingest.py`** — leest elk bestand uit → `output/tekst/` + `output/manifest.json` (bronregister)
+2. **`report.py`** — `output/rapportage.md` met chronologische tijdlijn + bronregister
+3. **`analyze.py`** — `output/duiding.md` met de inhoudelijke analyse van Claude (alleen als de sleutel is gezet)
 
-Open die URL, voer de code in, log in met je eigen account. Daarna worden alle
-bestanden geïnventariseerd, gedownload en uitgelezen. Het token wordt gecachet
-(`.token_cache.json`), dus de volgende keer hoef je meestal niet opnieuw in te loggen.
-
-## Stap 5 — Rapportage maken
-
-```bash
-python report.py
-```
-
-Opent: `output/rapportage.md` — bronregister + chronologische tijdlijn.
+> Liever stap voor stap? `python local_ingest.py` → `python report.py` → `python analyze.py`.
 
 ---
 
-## Ondersteunde bestandstypen
+## Wat je krijgt in `output/`
 
-`.docx`, `.pdf`, `.xlsx`, `.pptx`, `.rtf`, `.txt`, `.csv`, `.md`, `.log`.
+| Bestand | Inhoud |
+|---|---|
+| `manifest.json`  | **Bronregister**: per bestand naam, pad, datums, grootte, **SHA-256**, `file://`-link |
+| `tekst/`         | Per document de geëxtraheerde platte tekst |
+| `rapportage.md`  | **Feiten**: verantwoording, chronologische tijdlijn (`[nr]`-verwijzingen), bronregister, aandachtspunten |
+| `duiding.md`     | **Inhoud**: bevindingen, chronologisch verhaal, openstaande vragen — elke bewering met `[nr]` |
+| `analyse/NNNN.json` | Per document de gestructureerde analyse (samenvatting, betrokkenen, gebeurtenissen, relevantie) |
 
-Gescande PDF's (beeld zonder tekstlaag) leveren geen tekst op; die worden in de
-rapportage onder *Aandachtspunten* gemarkeerd (OCR is dan nodig). Oude `.doc`/
-`.xls`/`.ppt` (binair) worden niet ondersteund — converteer ze naar het nieuwe
-formaat of voeg een extractor toe.
+## Twee niveaus, bewust gescheiden
 
-## Veiligheid & zorgvuldigheid (raadsonderzoek)
+- **Feitelijke basis** (`rapportage.md`) is machinaal en volledig herleidbaar: datums uit
+  bestandsmetadata én datums die letterlijk in de tekst staan, elk gekoppeld aan een bron.
+- **Inhoudelijke duiding** (`duiding.md`) is door Claude geschreven (model `claude-opus-4-8`,
+  met *adaptive thinking*). De raadsonderzoeker-rol is zo ingesteld dat er onderscheid wordt
+  gemaakt tussen feit en interpretatie, onzekerheid expliciet wordt benoemd, en er niets wordt
+  verzonnen. **Controleer bevindingen altijd bij de bron** voordat je ze in een onderzoek gebruikt.
 
-- `.env` en `.token_cache.json` staan in `.gitignore` en worden **nooit** gecommit.
-- Het token geeft alleen leesrechten (`*.Read.All`) — er wordt niets gewijzigd in SharePoint.
-- Het `manifest.json` legt per bron de **volledige herkomst** vast (pad, URL, datums,
-  auteur, hash) zodat elk feit in de rapportage herleidbaar en verifieerbaar is.
-- Datums uit de tekst worden machinaal herkend; controleer bij twijfel altijd bij de bron.
+## Zorgvuldigheid
+
+- `.env`, `output/` en `input_documenten/` (jouw documenten) staan in `.gitignore` en worden
+  **nooit** gecommit.
+- Het bronregister legt per bron de volledige herkomst vast (pad, datums, SHA-256-hash), zodat
+  elk feit herleidbaar en verifieerbaar blijft.
+- Gescande PDF's zonder tekstlaag leveren geen tekst op; die worden in `rapportage.md` onder
+  *Aandachtspunten* gemarkeerd (OCR nodig).
+
+---
+
+## Configuratie (`.env`, optioneel)
+
+| Variabele          | Standaard            | Betekenis |
+|--------------------|----------------------|-----------|
+| `ANTHROPIC_API_KEY`| —                    | Jouw Anthropic-sleutel (nodig voor `analyze.py`) |
+| `INPUT_DIR`        | `input_documenten`   | Map met je documenten |
+| `OUTPUT_DIR`       | `output`             | Map voor resultaten |
+| `LLM_MODEL`        | `claude-opus-4-8`    | Claude-model voor de duiding |
+
+## Optioneel: tóch via SharePoint/Microsoft Graph
+
+Wil je later alsnog rechtstreeks koppelen i.p.v. lokaal? De bestanden `auth.py`,
+`graph_client.py`, `config.py` en `fetch.py` bevatten de device-code-login-route
+(zie de `SP_*`-variabelen in `.env.example`). Die produceert hetzelfde `manifest.json`,
+waarna `report.py` en `analyze.py` identiek werken.

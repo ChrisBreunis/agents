@@ -5,6 +5,10 @@
 # Opgehaalde bestanden, tekst en rapportage
 output/
 
+# Jouw documenten (vertrouwelijk — nooit committen)
+input_documenten/*
+!input_documenten/.gitkeep
+
 # Python
 .venv/
 __pycache__/

@@ -20,7 +20,7 @@ import re
 from collections import namedtuple
 from pathlib import Path
 
-from config import load_config
+from paths import load_paths
 
 MAANDEN = {
     "januari": 1, "februari": 2, "maart": 3, "april": 4, "mei": 5, "juni": 6,
@@ -65,17 +65,22 @@ def dates_in_text(text: str) -> list[tuple[str, str]]:
     return found
 
 
-def build_report(config) -> Path:
-    manifest_path = config.output_dir / "manifest.json"
+def _bron_url(f: dict) -> str:
+    # Werkt voor zowel de lokale flow (bron_url) als de Graph-flow (sharepoint_url).
+    return f.get("bron_url") or f.get("sharepoint_url") or ""
+
+
+def build_report(paths) -> Path:
+    manifest_path = paths.manifest_path
     if not manifest_path.exists():
-        raise SystemExit("manifest.json niet gevonden. Draai eerst: python fetch.py")
+        raise SystemExit("manifest.json niet gevonden. Draai eerst: python local_ingest.py")
 
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     files = data["bestanden"]
 
     events: list[Event] = []
     for f in files:
-        nr, naam, url = f["nr"], f["naam"], f.get("sharepoint_url", "")
+        nr, naam, url = f["nr"], f["naam"], _bron_url(f)
         # 1) metadata-datums (altijd betrouwbaar herleidbaar)
         if f.get("aangemaakt"):
             events.append(Event(f["aangemaakt"][:10], nr, naam, url,
@@ -96,14 +101,15 @@ def build_report(config) -> Path:
     out = []
     out.append("# Rapportage raadsonderzoek — feitenbasis en tijdlijn\n")
     out.append("## 1. Verantwoording\n")
+    bron_omschrijving = data.get("invoermap") or data.get("site_url") or data.get("bron", "")
     out.append(
-        f"- **Bron:** SharePoint-bibliotheek `{data['bibliotheek']}` op {data['site_url']}\n"
-        f"- **Opgehaald op:** {data['opgehaald_op']}\n"
+        f"- **Bron:** {bron_omschrijving}\n"
+        f"- **Verwerkt op:** {data['opgehaald_op']}\n"
         f"- **Aantal bestanden:** {data['aantal_bestanden']}\n"
-        "- **Methode:** alle bestanden zijn via Microsoft Graph opgehaald, lokaal "
-        "opgeslagen en geëxtraheerd tot platte tekst. Datums zijn afgeleid uit "
-        "(a) de documentmetadata en (b) datums die letterlijk in de tekst voorkomen. "
-        "Elke tijdlijnregel verwijst met `[nr]` naar het bronregister in paragraaf 3.\n"
+        "- **Methode:** alle bestanden zijn lokaal ingelezen en geëxtraheerd tot "
+        "platte tekst. Datums zijn afgeleid uit (a) de bestandsmetadata en (b) datums "
+        "die letterlijk in de tekst voorkomen. Elke tijdlijnregel verwijst met `[nr]` "
+        "naar het bronregister in paragraaf 3.\n"
         "- **Let op:** dit document bevat de feitelijke, herleidbare basis. "
         "Datums uit de tekst zijn machinaal herkend en moeten bij twijfel handmatig "
         "bij de bron geverifieerd worden.\n"
@@ -117,15 +123,16 @@ def build_report(config) -> Path:
         out.append(f"| {e.date} | {ctx} | {e.bron} | [{e.nr}] {e.naam} |")
 
     out.append("\n## 3. Bronregister\n")
-    out.append("| Nr | Bestand | Pad | Aangemaakt | Gewijzigd | Door | SharePoint |")
+    out.append("| Nr | Bestand | Pad | Aangemaakt | Gewijzigd | SHA-256 | Bron |")
     out.append("|---|---|---|---|---|---|---|")
     for f in files:
-        url = f.get("sharepoint_url") or ""
-        link = f"[link]({url})" if url else ""
+        url = _bron_url(f)
+        link = f"[bestand]({url})" if url else ""
+        sha = (f.get("sha256") or "")[:12]
         out.append(
             f"| {f['nr']} | {f['naam']} | `{f['pad']}` | "
             f"{(f.get('aangemaakt') or '')[:10]} | {(f.get('gewijzigd') or '')[:10]} | "
-            f"{f.get('gewijzigd_door','')} | {link} |"
+            f"`{sha}` | {link} |"
         )
 
     # Bestanden die niet (volledig) uitgelezen konden worden, apart benoemen.
@@ -135,14 +142,14 @@ def build_report(config) -> Path:
         for f in problemen:
             out.append(f"- **[{f['nr']}] {f['naam']}** — {f['notitie']}")
 
-    report_path = config.output_dir / "rapportage.md"
+    report_path = paths.output_dir / "rapportage.md"
     report_path.write_text("\n".join(out) + "\n", encoding="utf-8")
     return report_path
 
 
 def main() -> None:
-    config = load_config()
-    path = build_report(config)
+    paths = load_paths()
+    path = build_report(paths)
     print(f"✓ Rapportage geschreven: {path}")
 
 
