@@ -13,3 +13,8 @@ input_documenten/*
 .venv/
 __pycache__/
 *.pyc
+
+# Build / install-artefacten
+build/
+dist/
+*.egg-info/

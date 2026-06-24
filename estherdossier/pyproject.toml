@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "estherdossier"
+version = "0.1.0"
+description = "Documenten uitlezen en duiden voor een raadsonderzoek: feitelijke tijdlijn met bronvermelding en een door Claude opgestelde, herleidbare onderbouwing."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "anthropic>=0.69",
+    "python-dotenv>=1.0",
+    "python-docx>=1.1",
+    "pypdf>=5.1",
+    "openpyxl>=3.1",
+    "python-pptx>=1.0",
+    "striprtf>=0.0.26",
+    # Alleen nodig voor de optionele SharePoint/Graph-route:
+    "msal>=1.31",
+    "requests>=2.32",
+]
+
+[project.scripts]
+estherdossier = "run:main"
+
+[tool.setuptools]
+# Losse modules (geen package-map); blijven zo importeerbaar als `import paths` enz.
+py-modules = [
+    "paths",
+    "extractors",
+    "local_ingest",
+    "report",
+    "analyze",
+    "run",
+    "config",
+    "auth",
+    "graph_client",
+    "fetch",
+]

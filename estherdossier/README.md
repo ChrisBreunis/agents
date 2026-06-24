@@ -1,4 +1,4 @@
-# Documenten uitlezen en duiden voor een raadsonderzoek (lokaal)
+# Estherdossier
 
 Leest **alle** documenten uit een lokale map, maakt een **feitelijke tijdlijn met
 bronvermelding**, en laat **Claude een inhoudelijke duiding** schrijven waarin elke
@@ -17,18 +17,23 @@ input_documenten/  ──►  local_ingest.py  ──►  report.py   ──► 
 Zet je bestanden hier neer (submappen mogen — alles wordt recursief doorzocht):
 
 ```
-sharepoint_research/input_documenten/
+input_documenten/
 ```
 
 Ondersteund: `.docx`, `.pdf`, `.xlsx`, `.pptx`, `.rtf`, `.txt`, `.csv`, `.md`, `.log`.
 
-## Stap 2 — Installeren
+## Stap 2 — Installeren op je laptop
 
 ```bash
-cd sharepoint_research
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+git clone https://github.com/ChrisBreunis/Estherdossier.git
+cd Estherdossier
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -e .
 ```
+
+Daarna kun je de tool overal aanroepen met het commando `estherdossier`
+(equivalent aan `python run.py`). Draai het vanuit de projectmap, zodat
+`input_documenten/` en `onderzoeksvraag.md` worden gevonden.
 
 ## Stap 3 — API-sleutel voor de duiding
 
