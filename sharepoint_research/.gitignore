@@ -1,0 +1,11 @@
+# Geheimen en tokens — NOOIT committen
+.env
+.token_cache.json
+
+# Opgehaalde bestanden, tekst en rapportage
+output/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
