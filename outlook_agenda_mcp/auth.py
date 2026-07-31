@@ -203,7 +203,33 @@ def verleende_rechten(config: Config) -> list[str]:
     ruw = resultaat.get("scope") or ""
     if isinstance(ruw, list):
         return ruw
-    return [deel for deel in ruw.split() if deel]
+    rechten = [deel for deel in ruw.split() if deel]
+    if rechten:
+        return rechten
+    # Komt een token uit de cache, dan laat MSAL 'scope' soms weg. De rechten
+    # staan dan nog wel in het token zelf.
+    return _rechten_uit_token(resultaat.get("access_token") or "")
+
+
+def _rechten_uit_token(token: str) -> list[str]:
+    """De scp-claim uit een toegangstoken lezen. Puur om te tonen wat er is
+    verleend; de handtekening controleert Microsoft zelf bij elke aanroep."""
+    import base64
+    import json
+
+    delen = token.split(".")
+    if len(delen) < 2:
+        return []
+    lading = delen[1]
+    lading += "=" * (-len(lading) % 4)  # base64url zonder opvulling
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(lading))
+    except (ValueError, TypeError):
+        return []
+    scp = claims.get("scp") or ""
+    if isinstance(scp, list):
+        return scp
+    return [deel for deel in scp.split() if deel]
 
 
 __all__ = ["AuthError", "ConfigError", "login", "token", "verleende_rechten", "wis_cache"]
