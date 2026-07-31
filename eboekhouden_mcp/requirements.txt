@@ -1,3 +1,8 @@
 mcp>=1.9
 requests>=2.32
 python-dotenv>=1.0
+
+# Optioneel: bewaart je API-sleutel in de kluis van je besturingssysteem
+# (Windows Credential Manager, macOS Keychain, Linux Secret Service) in plaats
+# van in een leesbaar .env-bestand. Zie save_token.py.
+keyring>=25.0

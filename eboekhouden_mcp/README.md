@@ -17,7 +17,10 @@ concept op met totalen, laat dat zien, en boekt het pas als jij akkoord geeft.
   `EBOEKHOUDEN_ALLOW_EMAIL=true` zet.
 - **Alleen `create_invoice` en `create_relation` schrijven** in je
   administratie. Alle andere tools zijn puur lezen.
-- **Je API-sleutel hoort in `.env`**, die door `.gitignore` buiten git blijft.
+- **Je API-sleutel hoort in de kluis van je besturingssysteem** (`save_token.py`),
+  of anders in `.env`, die door `.gitignore` buiten git blijft. Plak hem nooit
+  in een chat, een issue of een pull request: raakt hij daar bekend, trek hem
+  dan meteen in bij *Beheer → Inrichting → Koppelingen → API*.
 
 ## Instellen
 
@@ -25,12 +28,27 @@ concept op met totalen, laat dat zien, en boekt het pas als jij akkoord geeft.
    API → Nieuwe API-sleutel aanmaken*. Geef de sleutel een herkenbare naam
    (bijvoorbeeld "Claude").
 
-2. **Configuratie klaarzetten:**
+2. **Sleutel veilig opslaan** — bij voorkeur in de kluis van je
+   besturingssysteem, niet in een tekstbestand:
 
    ```bash
    cd eboekhouden_mcp
+   uv run python save_token.py
+   ```
+
+   Je plakt de sleutel bij een verborgen prompt; hij verschijnt niet op je
+   scherm en komt niet in je opdrachtgeschiedenis. Opslag gaat naar Windows
+   Credential Manager, de macOS Keychain of de Linux Secret Service —
+   ingebouwd, gratis, geen account nodig.
+
+   Wil je liever een bestand, of heeft je systeem geen kluis? Dan kan het ook
+   via `.env`:
+
+   ```bash
    cp .env.example .env      # vul EBOEKHOUDEN_API_TOKEN in
    ```
+
+   Staat de sleutel op beide plekken, dan wint `.env`.
 
 3. **Afhankelijkheden installeren** (vanuit de repo-root, die `uv` gebruikt):
 

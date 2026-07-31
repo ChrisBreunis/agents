@@ -42,7 +42,8 @@ def main() -> int:
         melden(True, f".env gevonden: {env_pad}")
     else:
         melden(None, f"geen .env naast de server ({env_pad})")
-        print("    Kopieer .env.example naar .env en vul je API-sleutel in.")
+        print("    Dat mag: je sleutel kan ook in de kluis staan. Een .env is "
+              "alleen\n    nodig voor standaardinstellingen zoals het sjabloon-id.")
 
     # 3. Configuratie
     from config import ConfigError, load_config  # noqa: E402
@@ -52,8 +53,16 @@ def main() -> int:
     except ConfigError as exc:
         melden(False, "configuratie onvolledig")
         print(f"\n    {exc}")
+        print("\n    Aanbevolen: sla je sleutel op in de kluis van je "
+              "besturingssysteem\n    met 'uv run python save_token.py'.")
         return 1
+    import os
+
+    herkomst = (".env of omgevingsvariabele"
+                if os.getenv("EBOEKHOUDEN_API_TOKEN", "").strip()
+                else "de sleutelkluis van je besturingssysteem")
     melden(True, f"API-sleutel gevonden ({len(cfg.api_token)} tekens, niet getoond)")
+    melden(None, f"herkomst: {herkomst}")
     melden(None, f"API-adres: {cfg.base_url}")
 
     # 4. Verbinding

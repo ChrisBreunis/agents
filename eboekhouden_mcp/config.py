@@ -22,9 +22,28 @@ except ImportError:  # python-dotenv niet geïnstalleerd: dan alleen echte env-v
 
 API_BASE = "https://api.e-boekhouden.nl"
 
+# Namen waaronder het token in de sleutelkluis van het besturingssysteem staat
+# (Windows Credential Manager, macOS Keychain of Linux Secret Service).
+KEYRING_DIENST = "eboekhouden-mcp"
+KEYRING_GEBRUIKER = "api-token"
+
 
 class ConfigError(RuntimeError):
     """Ontbrekende of onbruikbare configuratie."""
+
+
+def token_uit_kluis() -> str:
+    """Het API-token uit de sleutelkluis, of een lege tekst als er geen kluis
+    beschikbaar is of er niets in staat."""
+    try:
+        import keyring
+    except ImportError:
+        return ""
+    try:
+        return (keyring.get_password(KEYRING_DIENST, KEYRING_GEBRUIKER) or "").strip()
+    except Exception:
+        # Geen werkende kluis op dit systeem (komt voor op kale servers).
+        return ""
 
 
 @dataclass(frozen=True)
@@ -50,12 +69,14 @@ def _int_or_none(name: str) -> int | None:
 
 
 def load_config() -> Config:
-    api_token = os.getenv("EBOEKHOUDEN_API_TOKEN", "").strip()
+    # Een expliciet gezette omgevingsvariabele of .env wint; staat daar niets,
+    # dan pakken we het token uit de sleutelkluis van het besturingssysteem.
+    api_token = os.getenv("EBOEKHOUDEN_API_TOKEN", "").strip() or token_uit_kluis()
     if not api_token:
         raise ConfigError(
-            "EBOEKHOUDEN_API_TOKEN ontbreekt. Maak een API-sleutel aan in "
-            "e-Boekhouden (Beheer > Koppelingen > API) en zet die in .env. "
-            "Kopieer .env.example naar .env als startpunt."
+            "Geen API-token gevonden. Sla je sleutel op in de kluis van je "
+            "besturingssysteem met 'python save_token.py' (aanbevolen), of zet "
+            "EBOEKHOUDEN_API_TOKEN in .env — kopieer .env.example als startpunt."
         )
 
     return Config(
