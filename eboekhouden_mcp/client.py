@@ -42,11 +42,19 @@ class EBoekhoudenClient:
     # ── sessie ──────────────────────────────────────────────────────────
     def _nieuw_token(self) -> None:
         url = f"{self.config.base_url}/v1/session"
-        resp = self.session.post(
-            url,
-            json={"accessToken": self.config.api_token, "source": self.config.source},
-            timeout=self.config.timeout,
-        )
+        try:
+            resp = self.session.post(
+                url,
+                json={"accessToken": self.config.api_token, "source": self.config.source},
+                timeout=self.config.timeout,
+            )
+        except requests.RequestException as exc:
+            raise EBoekhoudenError(
+                0,
+                f"kan {self.config.base_url} niet bereiken ({exc.__class__.__name__}). "
+                "Controleer je internetverbinding, een eventuele proxy of firewall.",
+                "/v1/session",
+            ) from exc
         if resp.status_code >= 400:
             raise EBoekhoudenError(resp.status_code, _fouttekst(resp), "/v1/session")
 

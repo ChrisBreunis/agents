@@ -5,10 +5,18 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    # Claude start de server vanuit een willekeurige werkmap, dus zoeken we de
+    # .env eerst naast deze module en pas daarna op de gewone manier (werkmap
+    # en hoger). Zonder dit wordt eboekhouden_mcp/.env simpelweg gemist.
+    _EIGEN_ENV = Path(__file__).resolve().parent / ".env"
+    if _EIGEN_ENV.exists():
+        load_dotenv(_EIGEN_ENV)
+    else:
+        load_dotenv()
 except ImportError:  # python-dotenv niet geïnstalleerd: dan alleen echte env-vars
     pass
 
