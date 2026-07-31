@@ -69,8 +69,22 @@ def _id(record: dict) -> int | None:
     return None
 
 
+def _omzetrekening_tip() -> str:
+    """Suggesties voor de omzetrekening, zodat een ontbrekend ledger_id meteen
+    op te lossen is zonder eerst apart te moeten zoeken."""
+    try:
+        rekeningen = [r for r in client().grootboekrekeningen()
+                      if "omzet" in str(r.get("description", "")).lower()]
+    except EBoekhoudenError:
+        return ""
+    if not rekeningen:
+        return ""
+    keuzes = ", ".join(f"{_id(r)} ({_naam(r)})" for r in rekeningen[:8])
+    return f" Mogelijke omzetrekeningen: {keuzes}."
+
+
 def _normaliseer_regel(regel: dict, index: int, standaard_grootboek: int | None,
-                       standaard_btw: str) -> dict:
+                       standaard_btw: str, grootboek_tip: str = "") -> dict:
     """Eén factuurregel omzetten naar de velden die de API verwacht."""
     def pak(*namen, standaard=None):
         for naam in namen:
@@ -103,8 +117,8 @@ def _normaliseer_regel(regel: dict, index: int, standaard_grootboek: int | None,
     grootboek = pak("ledger_id", "ledgerId", "grootboek", standaard=standaard_grootboek)
     if grootboek is None:
         raise ValueError(
-            f"Regel {index + 1}: 'ledger_id' ontbreekt. Zoek de juiste omzetrekening "
-            "met list_ledgers, of zet EBOEKHOUDEN_DEFAULT_LEDGER_ID in .env."
+            f"Regel {index + 1}: 'ledger_id' ontbreekt — op welke omzetrekening moet "
+            f"deze regel geboekt worden?{grootboek_tip}"
         )
 
     genormaliseerd = {
@@ -280,14 +294,33 @@ async def prepare_invoice(
 
     cfg = config()
     sjabloon = template_id if template_id is not None else cfg.default_template_id
+    automatisch_sjabloon = False
     if sjabloon is None:
-        raise ValueError(
-            "template_id ontbreekt. Vraag de sjablonen op met list_invoice_templates "
-            "of zet EBOEKHOUDEN_DEFAULT_TEMPLATE_ID in .env."
-        )
+        # Niets ingesteld: heb je maar één sjabloon, dan is de keuze eenduidig.
+        beschikbaar = client().factuursjablonen()
+        if len(beschikbaar) == 1:
+            sjabloon = _id(beschikbaar[0])
+            automatisch_sjabloon = True
+        elif not beschikbaar:
+            raise ValueError(
+                "Er zijn geen factuursjablonen gevonden in je administratie. "
+                "Maak er eerst één aan in e-Boekhouden."
+            )
+        else:
+            keuzes = ", ".join(
+                f"{_id(s)} ({_naam(s)})" for s in beschikbaar[:10]
+            )
+            raise ValueError(
+                f"Er zijn meerdere factuursjablonen; geef template_id mee. Keuzes: {keuzes}."
+            )
 
+    mist_grootboek = cfg.default_ledger_id is None and any(
+        not any(sleutel in regel for sleutel in ("ledger_id", "ledgerId", "grootboek"))
+        for regel in items
+    )
+    tip = _omzetrekening_tip() if mist_grootboek else ""
     regels = [
-        _normaliseer_regel(regel, i, cfg.default_ledger_id, cfg.default_vat_code)
+        _normaliseer_regel(regel, i, cfg.default_ledger_id, cfg.default_vat_code, tip)
         for i, regel in enumerate(items)
     ]
 
@@ -320,7 +353,11 @@ async def prepare_invoice(
         sjablonen = client().factuursjablonen()
         gekozen = next((s for s in sjablonen if _id(s) == sjabloon), None)
         if gekozen:
-            toelichting["sjabloon"] = _naam(gekozen, str(sjabloon))
+            naam = _naam(gekozen, str(sjabloon))
+            toelichting["sjabloon"] = (
+                f"{naam} (automatisch gekozen: het enige sjabloon)"
+                if automatisch_sjabloon else naam
+            )
     except EBoekhoudenError:
         pass
 
