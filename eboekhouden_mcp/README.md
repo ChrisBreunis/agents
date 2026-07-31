@@ -92,11 +92,12 @@ concept op met totalen, laat dat zien, en boekt het pas als jij akkoord geeft.
    }
    ```
 
-6. **Vaste keuzes vastleggen.** Vraag in Claude één keer
-   `list_invoice_templates` en `list_ledgers` op, en zet het sjabloon-id en je
-   omzetrekening in `.env` als `EBOEKHOUDEN_DEFAULT_TEMPLATE_ID` en
-   `EBOEKHOUDEN_DEFAULT_LEDGER_ID`. Daarna hoef je die per factuur niet meer te
-   noemen.
+6. **Vaste keuzes vastleggen — optioneel.** Heb je maar één factuursjabloon,
+   dan kiest de server dat vanzelf en zie je dat terug in het concept. Een
+   ontbrekende omzetrekening levert een foutmelding op die de rekeningen met
+   "omzet" in de naam meteen opsomt, zodat je direct kunt kiezen. Wil je die
+   keuzes toch vastleggen, zet dan `EBOEKHOUDEN_DEFAULT_TEMPLATE_ID` en
+   `EBOEKHOUDEN_DEFAULT_LEDGER_ID` in `.env`.
 
 ## Beschikbare tools
 
