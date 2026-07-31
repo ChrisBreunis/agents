@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "eboekhouden": {
+      "command": "uv",
+      "args": ["run", "--directory", "eboekhouden_mcp", "python", "server.py"]
+    }
+  }
+}

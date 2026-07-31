@@ -49,7 +49,10 @@ concept op met totalen, laat dat zien, en boekt het pas als jij akkoord geeft.
 
 5. **Aan Claude koppelen.**
 
-   Claude Code:
+   In **Claude Code** hoef je niets in te stellen: de repo bevat een
+   `.mcp.json` die deze server aanmeldt. Open de repo, bevestig eenmalig dat je
+   de projectserver vertrouwt, en controleer met `/mcp` dat `eboekhouden`
+   verbonden is. Wil je het toch handmatig:
 
    ```bash
    claude mcp add eboekhouden -- uv run --directory /pad/naar/agents/eboekhouden_mcp python server.py
@@ -112,6 +115,9 @@ deur als je een bedrag hebt afgesproken.
 - **Onbekende btw-code?** Dan telt die regel in het *concept* als 0% en krijg je
   een waarschuwing. De factuur zelf gaat gewoon met jouw code naar
   e-Boekhouden.
+- **Waar `.env` staat.** De server zoekt `.env` naast zichzelf (in
+  `eboekhouden_mcp/`), ongeacht vanuit welke map hij gestart wordt. Staat daar
+  geen `.env`, dan valt hij terug op de werkmap en hoger.
 - **Authenticatie.** De server haalt met je API-sleutel een sessietoken op en
   vernieuwt dat automatisch. Verwacht jouw omgeving het `Bearer`-voorvoegsel in
   de `Authorization`-header, dan schakelt de client daar bij de eerste 401
