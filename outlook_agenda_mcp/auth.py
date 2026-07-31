@@ -138,12 +138,7 @@ def login(config: Config, toon=print) -> dict:
     flow = app.initiate_device_flow(scopes=config.scopes)
     if "user_code" not in flow:
         fout = flow.get("error_description") or flow.get("error") or str(flow)
-        raise AuthError(
-            f"Kon geen inlogcode opvragen: {fout}\n\n"
-            "Meestal betekent dit dat 'Openbare clientstromen toestaan' nog uit "
-            "staat bij je app-registratie in Entra ID (Verificatie > Geavanceerde "
-            "instellingen). Zie README.md."
-        )
+        raise AuthError(f"Kon geen inlogcode opvragen: {fout}\n\n{_uitleg(fout)}")
 
     toon(flow["message"])
     resultaat = app.acquire_token_by_device_flow(flow)
@@ -151,8 +146,46 @@ def login(config: Config, toon=print) -> dict:
 
     if "access_token" not in resultaat:
         fout = resultaat.get("error_description") or resultaat.get("error") or str(resultaat)
-        raise AuthError(f"Inloggen mislukt: {fout}")
+        raise AuthError(f"Inloggen mislukt: {fout}\n\n{_uitleg(fout)}")
     return resultaat
+
+
+def _uitleg(fout: str) -> str:
+    """De foutcodes van Microsoft zijn cryptisch; vertaal de bekende naar de
+    instelling die je moet aanpassen."""
+    if "AADSTS7000218" in fout:
+        return (
+            "Microsoft behandelt de app als vertrouwelijke client en verwacht een "
+            "geheim, terwijl deze inlogmethode er juist geen gebruikt. Zet in Entra "
+            "ID bij je app-registratie onder Verificatie > Geavanceerde instellingen "
+            "'Openbare clientstromen toestaan' op Ja, en sla op."
+        )
+    if "AADSTS700016" in fout:
+        return (
+            "De app bestaat niet in deze tenant. Controleer OUTLOOK_CLIENT_ID: dat "
+            "moet de Toepassings-id (client) van de Overzicht-pagina zijn, niet het "
+            "id van een clientgeheim of het object-id. Controleer ook of "
+            "OUTLOOK_TENANT_ID bij die app hoort."
+        )
+    if "AADSTS7000112" in fout:
+        return (
+            "De bedrijfsapp staat uit. Zet in Entra ID onder Bedrijfsapps > Alle "
+            "toepassingen > deze app > Eigenschappen 'Ingeschakeld voor aanmelding "
+            "door gebruikers' op Ja. Let op: dat is een ander scherm dan de "
+            "app-registratie met dezelfde naam."
+        )
+    if "AADSTS70016" in fout:
+        return (
+            "De inlogcode is verlopen voordat hij was goedgekeurd; hij is ongeveer "
+            "vijftien minuten geldig. Draai login.py opnieuw voor een verse code."
+        )
+    if "AADSTS65001" in fout or "AADSTS90094" in fout:
+        return (
+            "De gevraagde rechten zijn nog niet toegestaan. Voeg in Entra ID onder "
+            "API-machtigingen de gedelegeerde machtiging Calendars.ReadWrite toe, en "
+            "verleen zo nodig beheerderstoestemming."
+        )
+    return "Zie README.md voor de instellingen die deze server in Entra ID verwacht."
 
 
 def verleende_rechten(config: Config) -> list[str]:
@@ -170,7 +203,33 @@ def verleende_rechten(config: Config) -> list[str]:
     ruw = resultaat.get("scope") or ""
     if isinstance(ruw, list):
         return ruw
-    return [deel for deel in ruw.split() if deel]
+    rechten = [deel for deel in ruw.split() if deel]
+    if rechten:
+        return rechten
+    # Komt een token uit de cache, dan laat MSAL 'scope' soms weg. De rechten
+    # staan dan nog wel in het token zelf.
+    return _rechten_uit_token(resultaat.get("access_token") or "")
+
+
+def _rechten_uit_token(token: str) -> list[str]:
+    """De scp-claim uit een toegangstoken lezen. Puur om te tonen wat er is
+    verleend; de handtekening controleert Microsoft zelf bij elke aanroep."""
+    import base64
+    import json
+
+    delen = token.split(".")
+    if len(delen) < 2:
+        return []
+    lading = delen[1]
+    lading += "=" * (-len(lading) % 4)  # base64url zonder opvulling
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(lading))
+    except (ValueError, TypeError):
+        return []
+    scp = claims.get("scp") or ""
+    if isinstance(scp, list):
+        return scp
+    return [deel for deel in scp.split() if deel]
 
 
 __all__ = ["AuthError", "ConfigError", "login", "token", "verleende_rechten", "wis_cache"]
