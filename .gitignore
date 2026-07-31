@@ -181,3 +181,6 @@ cython_debug/
 # Ignore Accounts database in capstone project
 6_mcp/accounts.db
 6_mcp/memory/*.db
+# Tokencache van de Outlook-agenda MCP-server (valt hierop terug als er geen
+# sleutelkluis is). Bevat een geldig toegangstoken: nooit in git.
+.token-cache.json

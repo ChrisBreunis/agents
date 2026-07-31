@@ -1,0 +1,12 @@
+mcp>=1.9
+requests>=2.32
+python-dotenv>=1.0
+
+# Regelt het inloggen bij Microsoft (device code flow) en het vernieuwen van
+# het token. Zie login.py.
+msal>=1.31
+
+# Optioneel: bewaart het token in de kluis van je besturingssysteem (Windows
+# Credential Manager, macOS Keychain, Linux Secret Service) in plaats van in
+# een bestand naast de server.
+keyring>=25.0
