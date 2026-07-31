@@ -138,12 +138,7 @@ def login(config: Config, toon=print) -> dict:
     flow = app.initiate_device_flow(scopes=config.scopes)
     if "user_code" not in flow:
         fout = flow.get("error_description") or flow.get("error") or str(flow)
-        raise AuthError(
-            f"Kon geen inlogcode opvragen: {fout}\n\n"
-            "Meestal betekent dit dat 'Openbare clientstromen toestaan' nog uit "
-            "staat bij je app-registratie in Entra ID (Verificatie > Geavanceerde "
-            "instellingen). Zie README.md."
-        )
+        raise AuthError(f"Kon geen inlogcode opvragen: {fout}\n\n{_uitleg(fout)}")
 
     toon(flow["message"])
     resultaat = app.acquire_token_by_device_flow(flow)
@@ -151,8 +146,34 @@ def login(config: Config, toon=print) -> dict:
 
     if "access_token" not in resultaat:
         fout = resultaat.get("error_description") or resultaat.get("error") or str(resultaat)
-        raise AuthError(f"Inloggen mislukt: {fout}")
+        raise AuthError(f"Inloggen mislukt: {fout}\n\n{_uitleg(fout)}")
     return resultaat
+
+
+def _uitleg(fout: str) -> str:
+    """De foutcodes van Microsoft zijn cryptisch; vertaal de bekende naar de
+    instelling die je moet aanpassen."""
+    if "AADSTS7000218" in fout:
+        return (
+            "Microsoft behandelt de app als vertrouwelijke client en verwacht een "
+            "geheim, terwijl deze inlogmethode er juist geen gebruikt. Zet in Entra "
+            "ID bij je app-registratie onder Verificatie > Geavanceerde instellingen "
+            "'Openbare clientstromen toestaan' op Ja, en sla op."
+        )
+    if "AADSTS700016" in fout:
+        return (
+            "De app bestaat niet in deze tenant. Controleer OUTLOOK_CLIENT_ID: dat "
+            "moet de Toepassings-id (client) van de Overzicht-pagina zijn, niet het "
+            "id van een clientgeheim of het object-id. Controleer ook of "
+            "OUTLOOK_TENANT_ID bij die app hoort."
+        )
+    if "AADSTS65001" in fout or "AADSTS90094" in fout:
+        return (
+            "De gevraagde rechten zijn nog niet toegestaan. Voeg in Entra ID onder "
+            "API-machtigingen de gedelegeerde machtiging Calendars.ReadWrite toe, en "
+            "verleen zo nodig beheerderstoestemming."
+        )
+    return "Zie README.md voor de instellingen die deze server in Entra ID verwacht."
 
 
 def verleende_rechten(config: Config) -> list[str]:
