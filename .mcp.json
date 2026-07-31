@@ -3,6 +3,10 @@
     "eboekhouden": {
       "command": "uv",
       "args": ["run", "--directory", "eboekhouden_mcp", "python", "server.py"]
+    },
+    "outlook-agenda": {
+      "command": "uv",
+      "args": ["run", "--directory", "outlook_agenda_mcp", "python", "server.py"]
     }
   }
 }
