@@ -167,6 +167,18 @@ def _uitleg(fout: str) -> str:
             "id van een clientgeheim of het object-id. Controleer ook of "
             "OUTLOOK_TENANT_ID bij die app hoort."
         )
+    if "AADSTS7000112" in fout:
+        return (
+            "De bedrijfsapp staat uit. Zet in Entra ID onder Bedrijfsapps > Alle "
+            "toepassingen > deze app > Eigenschappen 'Ingeschakeld voor aanmelding "
+            "door gebruikers' op Ja. Let op: dat is een ander scherm dan de "
+            "app-registratie met dezelfde naam."
+        )
+    if "AADSTS70016" in fout:
+        return (
+            "De inlogcode is verlopen voordat hij was goedgekeurd; hij is ongeveer "
+            "vijftien minuten geldig. Draai login.py opnieuw voor een verse code."
+        )
     if "AADSTS65001" in fout or "AADSTS90094" in fout:
         return (
             "De gevraagde rechten zijn nog niet toegestaan. Voeg in Entra ID onder "
