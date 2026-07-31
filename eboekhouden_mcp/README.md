@@ -41,11 +41,14 @@ concept op met totalen, laat dat zien, en boekt het pas als jij akkoord geeft.
 4. **Verbinding testen:**
 
    ```bash
-   uv run python eboekhouden_mcp/server.py   # start de server; Ctrl-C om te stoppen
+   cd eboekhouden_mcp && uv run python check_setup.py
    ```
 
-   Start hij zonder fout, dan is de server klaar. De echte controle doe je
-   straks in Claude met de tool `check_connection`.
+   Dit controleert de pakketten, je `.env`, de verbinding, en toont je
+   factuursjablonen en omzetrekeningen met hun id's. Gaat er iets mis, dan
+   staat erbij wat een 401, 403 of een netwerkfout betekent. Je API-sleutel
+   wordt nooit afgedrukt, dus de uitvoer kun je veilig delen als je hulp nodig
+   hebt.
 
 5. **Aan Claude koppelen.**
 
